@@ -29,7 +29,7 @@ def _python_runfiles(ctx, f):
     return "PYTHON_RUNFILES=${RUNFILES} %s" % _runfiles(ctx, f)
 
 def _show_impl(ctx):
-    script_content = "#!/bin/bash\nset -e\n"
+    script_content = "#!/usr/bin/env bash\nset -e\n"
 
     kustomize_outputs = []
     script_template = "{template_engine} --template={infile} --variable=NAMESPACE={namespace} --stamp_info_file={info_file}\n"
@@ -110,6 +110,8 @@ def k8s_deploy(
         name_suffix = None,
         prefix_suffix_app_labels = False,  # apply kustomize configuration to modify "app" labels in Deployments when name prefix or suffix applied
         patches = None,
+        image_name_patches = {},
+        image_tag_patches = {},
         substitutions = {},  # dict of template parameter substitutions. CLUSTER and NAMESPACE parameters are added automatically.
         configurations = [],  # additional kustomize configuration files. rules_gitops provides
         common_labels = {},  # list of common labels to apply to all objects see commonLabels kustomize docs
@@ -123,6 +125,7 @@ def k8s_deploy(
         image_repository_prefix = None,  # Mutually exclusive with 'image_repository'. Add a prefix to the repository name generated from the image bazel path
         objects = [],
         gitops = True,  # make sure to use gitops = False to work with individual namespace. This option will be turned False if namespace is '{BUILD_USER}'
+        gitops_path = "cloud",
         deployment_branch = None,
         release_branch_prefix = "master",
         flatten_manifest_directories = False,
@@ -179,6 +182,8 @@ def k8s_deploy(
             common_annotations = common_annotations,
             patches = patches,
             objects = objects,
+            image_name_patches = image_name_patches,
+            image_tag_patches = image_tag_patches,
             visibility = visibility,
         )
         kubectl(
@@ -238,6 +243,8 @@ def k8s_deploy(
             common_labels = common_labels,
             common_annotations = common_annotations,
             patches = patches,
+            image_name_patches = image_name_patches,
+            image_tag_patches = image_tag_patches,
         )
         kubectl(
             name = name + ".apply",
@@ -252,6 +259,7 @@ def k8s_deploy(
             srcs = [name],
             cluster = cluster,
             namespace = namespace,
+            gitops_path = gitops_path,
             strip_prefixes = [
                 namespace + "-",
                 cluster + "-",

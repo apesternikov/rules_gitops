@@ -33,12 +33,17 @@ import (
 	proto "github.com/golang/protobuf/proto"
 )
 
+func init() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
+
 var (
 	releaseBranch          = flag.String("release_branch", "master", "filter gitops targets by release branch")
 	bazelCmd               = flag.String("bazel_cmd", "tools/bazel", "bazel binary to use")
 	workspace              = flag.String("workspace", "", "path to workspace root")
 	repo                   = flag.String("git_repo", "https://bitbucket.tubemogul.info/scm/tm/repo.git", "git repo location")
 	gitMirror              = flag.String("git_mirror", "", "git mirror location, like /mnt/mirror/bitbucket.tubemogul.info/tm/repo.git for jenkins")
+	gitopsPath             = flag.String("gitops_path", "cloud", "location to store files in repo.")
 	gitopsTmpDir           = flag.String("gitops_tmpdir", os.TempDir(), "location to check out git tree with /cloud.")
 	target                 = flag.String("target", "//... except //experimental/...", "target to scan. Useful for debugging only")
 	pushParallelism        = flag.Int("push_parallelism", 5, "Number of image pushes to perform concurrently")
@@ -116,7 +121,7 @@ func main() {
 		log.Fatalf("Unable to create tempdir in %s: %v", *gitopsTmpDir, err)
 	}
 	defer os.RemoveAll(gitopsdir)
-	workdir, err := git.Clone(*repo, gitopsdir, *gitMirror, *prInto)
+	workdir, err := git.Clone(*repo, gitopsdir, *gitMirror, *prInto, *gitopsPath)
 	if err != nil {
 		log.Fatalf("Unable to clone repo: %v", err)
 	}
@@ -149,7 +154,7 @@ func main() {
 			bin := bazel.TargetToExecutable(target)
 			exec.Mustex("", bin, "--nopush", "--nobazel", "--deployment_root", gitopsdir)
 		}
-		if workdir.Commit(fmt.Sprintf("GitOps for release branch %s from %s commit %s\n%s", *releaseBranch, *branchName, *gitCommit, commitmsg.Generate(targets))) {
+		if workdir.Commit(fmt.Sprintf("GitOps for release branch %s from %s commit %s\n%s", *releaseBranch, *branchName, *gitCommit, commitmsg.Generate(targets)), *gitopsPath) {
 			log.Println("branch", branch, "has changes, push is required")
 			updatedGitopsTargets = append(updatedGitopsTargets, targets...)
 			updatedGitopsBranches = append(updatedGitopsBranches, branch)
