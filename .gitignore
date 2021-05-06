@@ -1,6 +1,7 @@
 .idea/
 .vscode/
 .idea/
+.ijwb/
 .DS_Store
 Thumbs.db
 bazel-*
